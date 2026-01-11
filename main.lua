@@ -1,16 +1,15 @@
 --     LOADSTRINGs --
-pcall(function()
-		loadstring(game:HttpGet('https://raw.githubusercontent.com/gazakov/dahoodACbypass/refs/heads/main/script.lua'))()
-	end)
---[[
-THE CODE LOADSTRING BTW:
-loadstring(game:HttpGet('https://raw.githubusercontent.com/davipa28282/haha-funny-dh/refs/heads/main/main.lua'))()
+pcall(function()loadstring(game:HttpGet('https://raw.githubusercontent.com/davipa28282/haha-funny-dh/refs/heads/main/dhAC.lua'))()
+end)
+--[[loadstring for scripts
+	loadstring(game:HttpGet('https://raw.githubusercontent.com/davipa28282/haha-funny-dh/refs/heads/main/main.lua'))()
 ]]
 --     VARIABLES   --
 local Players = game:GetService('Players')
 local lp = Players.LocalPlayer
 local targ = false
 local tcon
+local selfg
 local m = game:GetService("ReplicatedStorage"):WaitForChild("MainEvent")
 --     UNC FIXES   --
 sethiddenproperty = sethiddenproperty or function() end
@@ -52,11 +51,13 @@ function gettool(n)
 		return c
 	end
 end
-function forcefollow(plrname, glue, time,retur)
+function forcefollow(plrname, glue, time,retur,knock)
 	retur = retur or true
 	glue = glue or false
 	time = time or 1
+	knock = knock or true
 	local t = getp(plrname)
+
 	if t then
 		local t = safeChar(t)
 		local self = safeChar(lp)
@@ -64,6 +65,12 @@ function forcefollow(plrname, glue, time,retur)
 		local sh = self:FindFirstChild('HumanoidRootPart')
 		local ticksafe = tick()
 		local old = sh.CFrame
+		local fist = gettool('combat')
+		if knock then
+			fist.Parent = self
+			fist:Activate()
+			task.wait(1)
+		end
 		while tick() - ticksafe < time do
 			task.wait()
 			sh.Velocity = Vector3.zero
@@ -76,38 +83,61 @@ function forcefollow(plrname, glue, time,retur)
 			task.wait(0.5)
 			sh.CFrame = old
 		end
+		if knock then
+			fist.Parent = lp.Backpack
+		end
 		sh.Velocity = Vector3.zero
 		return t
 	end
 end
 cmdController.Commands = {
 	knock = function(plr,g)
-		local self = safeChar(lp)
-		local fist = gettool('combat')
-		fist.Parent = self
-		fist:Activate()
-		task.wait(1)
-		local fchar = forcefollow(plr,g,2,false)
-		local torso = fchar:WaitForChild('UpperTorso')
+		forcefollow(plr,g,2,false,true)
 	end,
 	bring = function(plr,g)
 		local self = safeChar(lp)
 		local h = self:WaitForChild('HumanoidRootPart')
-		local fist = gettool('combat')
-		fist.Parent = self
-		fist:Activate()
-		task.wait(1)
-		local fchar = forcefollow(plr,g,2,false)
-		local torso = fchar:WaitForChild('UpperTorso')
+		local o = h.CFrame
+		local fchar = forcefollow(plr,g,2,false,true)
+		local torso = fchar:FindFirstChild('UpperTorso')
+		local tih = tick()
+		local ftick = tick()
+		while tick() - tih < 4 and not fchar:FindFirstChild('GRABBING_CONSTRAINT') and torso do
+			sethiddenproperty(h,'PhysicsRepRootPart',torso)
+			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,0))
+			if tick() - ftick > 0.25 then
+				m:FireServer('Grabbing',false)
+				ftick = tick()
+			end
+			task.wait()
+		end
+		sethiddenproperty(h,'PhysicsRepRootPart',h)
+		h.CFrame = o
+	end,
+	stomp = function(plr,g)
+		local self = safeChar(lp)
+		local h = self:WaitForChild('HumanoidRootPart')
+		local o = h.CFrame
+		local fchar = forcefollow(plr,g,2,false,true)
+		local torso = fchar:FindFirstChild('UpperTorso')
 		local tih = tick()
 		local bf = fchar:WaitForChild('BodyEffects')
 		local grb = bf.Grabbed
-		while tick() - tih < 2 or grb.Value do
-			h.CFrame = torso.CFrame * CFrame.new(0,1.5,0)
-			m:FireServer('Grabbing',false)
-			task.wait()
+		local ftick = tick()
+		h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,6))
+		while tick() - tih < 4 and torso do
+			sethiddenproperty(h,'PhysicsRepRootPart',torso)
+			h.Velocity = Vector3.zero
+			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,0))
+			if tick() - ftick > 0.25 then
+				m:FireServer('Stomp')
+				ftick = tick()
+			end
+			task.wait()	
 		end
-	end,
+		sethiddenproperty(h,'PhysicsRepRootPart',h)
+		h.CFrame = o
+	end
 }
 cmdController.lCommands = {
 	funnyspit = function()
@@ -135,6 +165,17 @@ cmdController.lCommands = {
 	bring = function(p)
 		cmdController.Commands.bring(p,true)
 	end,
+	stomp = function(p)
+		cmdController.Commands.stomp(p,true)
+	end,
+	stop = function()
+		if tcon then
+			tcon:Disconnect()
+		end
+		if selfg then
+			selfg:Disconnect()
+		end
+	end,
 	select = function(plr)
 		local plrf = getp(plr)
 		if plrf then
@@ -152,7 +193,7 @@ function cmdController:Hook(plr)
 	else
 		targ = plr
 	end
-	return plr.Chatted:Once(function(msg)
+	return plr.Chatted:Connect(function(msg)
 		local split = msg:split(' ')
 		if split[1]:sub(0,#prefix) == prefix then
 			local stringp = split[1]:sub(#prefix+1)
@@ -169,4 +210,4 @@ end
 if targ then
 	tcon = cmdController:Hook(targ)
 end
-cmdController:Hook(lp)
+selfg = cmdController:Hook(lp)

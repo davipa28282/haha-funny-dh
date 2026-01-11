@@ -1,5 +1,7 @@
 --     LOADSTRINGs --
-loadstring(game:HttpGet('https://raw.githubusercontent.com/gazakov/dahoodACbypass/refs/heads/main/script.lua'))()
+pcall(function()
+		loadstring(game:HttpGet('https://raw.githubusercontent.com/gazakov/dahoodACbypass/refs/heads/main/script.lua'))()
+	end)
 --[[
 THE CODE LOADSTRING BTW:
 loadstring(game:HttpGet('https://raw.githubusercontent.com/davipa28282/haha-funny-dh/refs/heads/main/main.lua'))()

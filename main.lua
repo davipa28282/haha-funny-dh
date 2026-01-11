@@ -93,10 +93,10 @@ cmdController.Commands = {
 		task.wait(1)
 		local fchar = forcefollow(plr,g,2,false)
 		local torso = fchar:WaitForChild('UpperTorso')
-		local tick = tick()
+		local tih = tick()
 		local bf = fchar:WaitForChild('BodyEffects')
 		local grb = bf.Grabbed
-		while tick() - tick < 2 or grb.Value do
+		while tick() - tih < 2 or grb.Value do
 			h.CFrame = torso.CFrame * CFrame.new(0,1.5,0)
 			m:FireServer('Grabbing',false)
 			task.wait()

@@ -1,5 +1,9 @@
 --     LOADSTRINGs --
 loadstring(game:HttpGet('https://raw.githubusercontent.com/gazakov/dahoodACbypass/refs/heads/main/script.lua'))()
+--[[
+THE CODE LOADSTRING BTW:
+loadstring(game:HttpGet('https://raw.githubusercontent.com/davipa28282/haha-funny-dh/refs/heads/main/main.lua'))()
+]]
 --     VARIABLES   --
 local Players = game:GetService('Players')
 local lp = Players.LocalPlayer

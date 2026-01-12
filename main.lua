@@ -10,10 +10,34 @@ local lp = Players.LocalPlayer
 local targ = false
 local tcon
 local selfg
+local mg
 local m = game:GetService("ReplicatedStorage"):WaitForChild("MainEvent")
 --     UNC FIXES   --
 sethiddenproperty = sethiddenproperty or function() end
 --     ShortCuts   --
+function noti(title,text,buttons)
+	local buttonsz = 0
+	local tab = {
+		Title = title,
+		Text = text,
+		Duration = 5,
+		Callback = function(t)
+			if buttons then
+				local b = buttons[t]
+				if b then
+					b()
+				end
+			end
+		end,
+	}
+	if buttons then
+		for i,v in pairs(buttons) do
+			tab['Button'.. buttonsz+1] = i
+			buttonsz+=1
+		end
+	end
+	game:GetService('StarterGui'):SetCore("SendNotification", tab)
+end
 local function clamp3(vec,num)
 	return Vector3.new(
 		math.clamp(vec.X, -num, num),
@@ -28,10 +52,20 @@ function safeChar(plr)
 	return plr.Character or plr.CharacterAdded:Wait()
 end
 function getp(n)
-	for _,v in pairs(Players:GetPlayers()) do
-		if v.Name:lower() == n:lower() or v.DisplayName:lower() == n:lower() then
-			return v
+	if n ~= 'random' then
+		for _,v in pairs(Players:GetPlayers()) do
+			if v.Name:lower() == n:lower() or v.DisplayName:lower() == n:lower() then
+				return v
+			end
 		end
+	else
+		local ps = {}
+		for _,v in pairs(Players:GetPlayers()) do
+			if v ~= lp then
+				table.insert(ps,v)
+			end
+		end
+		return ps[math.random(1,#ps)]
 	end
 end
 function gettool(n)
@@ -51,11 +85,9 @@ function gettool(n)
 		return c
 	end
 end
-function forcefollow(plrname, glue, time,retur,knock)
+function forcefollow(plrname, time,retur,knock)
 	retur = retur or true
-	glue = glue or false
 	time = time or 1
-	knock = knock or true
 	local t = getp(plrname)
 
 	if t then
@@ -74,11 +106,10 @@ function forcefollow(plrname, glue, time,retur,knock)
 		while tick() - ticksafe < time do
 			task.wait()
 			sh.Velocity = Vector3.zero
-			sh.CFrame = th.CFrame * CFrame.new(0,-7,1) * CFrame.Angles(math.rad(90),0,0)
-			if glue then
-				sethiddenproperty(sh,'PhysicsRepRootPart',th)
-			end
+			sh.CFrame = CFrame.new(th.Position) * CFrame.new(0,-7,1) * CFrame.Angles(math.rad(90),0,0)
+			sethiddenproperty(sh,'PhysicsRepRootPart',th)
 		end
+		sethiddenproperty(sh,'PhysicsRepRootPart',nil)
 		if retur then
 			task.wait(0.5)
 			sh.CFrame = old
@@ -91,20 +122,88 @@ function forcefollow(plrname, glue, time,retur,knock)
 	end
 end
 cmdController.Commands = {
-	knock = function(plr,g)
-		forcefollow(plr,g,2,false,true)
+	knock = function(caller,plr)
+		if plr ~= lp then
+			forcefollow(plr,2,false,true)
+		end
 	end,
-	bring = function(plr,g)
+	sky = function(caller,plr)
+		if plr ~= lp then
+			local sh = safeChar(lp)
+			local h = sh.HumanoidRootPart
+			local v = tick()
+			local c = getp(plr)
+			if not c then
+				return
+			end
+			c = safeChar(c)
+			if not c then return end
+			c = c.HumanoidRootPart
+			local o = h.CFrame
+			while tick() - v < 5 do
+				task.wait()
+				h.CFrame = CFrame.new(c.Position) * CFrame.new(0,-3,0) * CFrame.Angles(math.rad(90),math.rad(65),0)
+				sethiddenproperty(h,'PhysicsRepRootPart',c)
+				sh.HumanoidRootPart.RotVelocity = Vector3.new(0,0,0)
+				sh.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+			end
+			h.CFrame = o
+			sethiddenproperty(sh,'PhysicsRepRootPart',nil)
+			task.wait()
+			for i = 0,1*100/2 do
+				task.wait()
+				sh.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+			end
+		end
+	end,
+	fling = function(caller,plr)
 		local self = safeChar(lp)
-		local h = self:WaitForChild('HumanoidRootPart')
+		local h = self:FindFirstChild('HumanoidRootPart')
 		local o = h.CFrame
-		local fchar = forcefollow(plr,g,2,false,true)
+		local t = getp(plr)
+		if not t then return end
+		local fchar = safeChar(t)
+		if not fchar then return end
+		local torso = fchar:FindFirstChild('UpperTorso')
+		local tih = tick()
+		h.CFrame = CFrame.new(torso.Position + Vector3.new(0,7,10))
+		local mag = h.Position
+		while tick() - tih < 7 and torso and h and (torso.Position - mag).Magnitude < 50 do
+			sethiddenproperty(h,'PhysicsRepRootPart',torso)
+			h.RotVelocity = Vector3.new(0,5000,0)
+			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,0,0)) * CFrame.Angles(math.rad(90),0,0)
+			task.wait()
+		end
+		sethiddenproperty(h,'PhysicsRepRootPart',h)
+		for _=1,4*100/2 do
+			task.wait()
+			h.RotVelocity = Vector3.zero
+			h.Velocity = Vector3.zero
+			h.CFrame = o
+		end
+	end,
+	bring = function(caller,plr)
+		local self = safeChar(lp)
+		local h = self:FindFirstChild('HumanoidRootPart')
+		if caller ~= lp and getp(plr) == lp and h then
+			local t = caller.Character
+			if t then
+				local hr = t:FindFirstChild('HumanoidRootPart')
+				if hr then
+					h.CFrame = hr.CFrame
+				end
+			end
+			return
+		end
+		local o = h.CFrame
+		local fchar = forcefollow(plr,2,false,true)
+		if not fchar then return end
 		local torso = fchar:FindFirstChild('UpperTorso')
 		local tih = tick()
 		local ftick = tick()
-		while tick() - tih < 4 and not fchar:FindFirstChild('GRABBING_CONSTRAINT') and torso do
+		while tick() - tih < 4 and not fchar:FindFirstChild('GRABBING_CONSTRAINT') and torso and h do
 			sethiddenproperty(h,'PhysicsRepRootPart',torso)
-			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,0))
+			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,5,0))
 			if tick() - ftick > 0.25 then
 				m:FireServer('Grabbing',false)
 				ftick = tick()
@@ -114,21 +213,20 @@ cmdController.Commands = {
 		sethiddenproperty(h,'PhysicsRepRootPart',h)
 		h.CFrame = o
 	end,
-	stomp = function(plr,g)
+	stomp = function(caller,plr)
 		local self = safeChar(lp)
-		local h = self:WaitForChild('HumanoidRootPart')
+		local h = self:FindFirstChild('HumanoidRootPart')
 		local o = h.CFrame
-		local fchar = forcefollow(plr,g,2,false,true)
+		local fchar = forcefollow(plr,2,false,true)
+		if not fchar then return end
 		local torso = fchar:FindFirstChild('UpperTorso')
 		local tih = tick()
-		local bf = fchar:WaitForChild('BodyEffects')
-		local grb = bf.Grabbed
 		local ftick = tick()
 		h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,6))
-		while tick() - tih < 4 and torso do
+		while tick() - tih < 4 and torso and h do
 			sethiddenproperty(h,'PhysicsRepRootPart',torso)
 			h.Velocity = Vector3.zero
-			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,2,0))
+			h.CFrame = CFrame.new(torso.Position + Vector3.new(0,5,0))
 			if tick() - ftick > 0.25 then
 				m:FireServer('Stomp')
 				ftick = tick()
@@ -139,6 +237,7 @@ cmdController.Commands = {
 		h.CFrame = o
 	end
 }
+local old = false
 cmdController.lCommands = {
 	funnyspit = function()
 		local ch = safeChar(lp)
@@ -159,16 +258,62 @@ cmdController.lCommands = {
 		p.Anchored = false
 		l:Stop(0)
 	end,
-	knock = function(p)
-		cmdController.Commands.knock(p,true)
+	re = function()
+		local self = safeChar(lp)
+		self:FindFirstChildOfClass('Humanoid').Health = 1
+		self:FindFirstChildOfClass('Humanoid').Health = 0
+		lp.CharacterAppearanceLoaded:Wait()
+		self = safeChar(lp)
+		local shp = self:FindFirstChild('HumanoidRootPart')
+		if shp and old then
+			Vector3.new(0,10,0)
+			shp.CFrame = old
+		end	
 	end,
-	bring = function(p)
-		cmdController.Commands.bring(p,true)
+	to = function(_,p)
+		local plr = getp(p)
+		if plr then
+			local ch = safeChar(plr)
+			local chp = ch:FindFirstChild('HumanoidRootPart')	
+			local self = safeChar(lp)
+			local shp = self:FindFirstChild('HumanoidRootPart')
+			old = shp.CFrame
+			if chp and shp then
+				Vector3.new(0,10,0)
+				shp.CFrame = chp.CFrame
+			end
+		end
 	end,
-	stomp = function(p)
-		cmdController.Commands.stomp(p,true)
+	back = function()
+		local self = safeChar(lp)
+		local shp = self:FindFirstChild('HumanoidRootPart')
+		if shp and old then
+			Vector3.new(0,10,0)
+			shp.CFrame = old
+		end	
+	end,
+	knock = function(_,p)
+		cmdController.Commands.knock(lp,p)
+	end,
+	bring = function(_,p)
+		cmdController.Commands.bring(lp,p)
+	end,
+	stomp = function(_,p)
+		cmdController.Commands.stomp(lp,p)
+	end,
+	fling = function(_,p)
+		cmdController.Commands.fling(lp,p)
+	end,
+	sky = function(_,p)
+		cmdController.Commands.sky(lp,p)
+	end,
+	['prefix'] = function(_,p)
+		prefix = p
 	end,
 	stop = function()
+		if mg then
+			mg:Disconnect()
+		end
 		if tcon then
 			tcon:Disconnect()
 		end
@@ -176,16 +321,54 @@ cmdController.lCommands = {
 			selfg:Disconnect()
 		end
 	end,
-	select = function(plr)
+	select = function(_,plr)
+		if tcon then
+			tcon:Disconnect()
+		end
 		local plrf = getp(plr)
 		if plrf then
-			if tcon then
-				tcon:Disconnect()
-			end
 			tcon = cmdController:Hook(plrf)
 		end
 	end,
 }
+local lp = game.Players.LocalPlayer
+local cg = nil
+
+local function connectKO(s, bf)
+	local val = bf:FindFirstChild('K.O')
+	if not val then return end
+
+	if mg then mg:Disconnect() end
+	mg = val.Changed:Connect(function()
+		if val.Value then
+			cmdController.lCommands.re() -- Define this if missing
+			mg:Disconnect()
+		end
+	end)
+end
+
+local s = safeChar(lp)
+local bf = s:FindFirstChild('BodyEffects')
+if bf then connectKO(s, bf) end
+
+s:FindFirstChildOfClass('Humanoid').Died:Connect(function()
+	cg = s.HumanoidRootPart.CFrame
+end)
+
+lp.CharacterAppearanceLoaded:Connect(function(newChar)
+	s = safeChar(lp)
+	s:PivotTo(cg or CFrame.new()) -- Default if no cg
+
+	bf = s:FindFirstChild('BodyEffects')
+	if bf then
+		connectKO(s, bf)
+		for i = 1, 10 do -- Clean loop
+			task.wait(0.2)
+			if s.Parent then s:PivotTo(cg) end
+		end
+	end
+end)
+
 function cmdController:Hook(plr)
 	local cmdTable = cmdController.Commands
 	if plr == lp then
@@ -200,8 +383,11 @@ function cmdController:Hook(plr)
 			local cmd = cmdTable[stringp]
 			if cmd then
 				table.remove(split,1)
+				if plr ~= lp then
+					noti('SELECTOR',plr.Name..' used '.. stringp)
+				end
 				task.spawn(function()
-					cmd(table.unpack(split))
+					cmd(plr,table.unpack(split))
 				end)
 			end
 		end
